@@ -248,20 +248,40 @@ def extract_fields(args):
 def cli():
     """Habitica command-line interface.
 
-    Usage: habitica [--version] [--help]
-                    <command> [<args>...] [--difficulty=<d>]
-                    [--verbose | --debug] [--checklists]
+    Usage: habitica (habits | dailies | todos | status | server | home)
+                    [--checklists]
+           habitica (habits | dailies | todos) add (task-name...)
+                    [--checklists]
+           habitica (habits | dailies | todos) add
+                    (--text=<txt>) [--notes=<n>] [--checklist=<items>]
+                    [--tags=<tg>] [--difficulty=<d>] [--date=<dd>]
+                    [--checklists]
+           habitica (habits | dailies | todos) delete (task-ids)
+                    [--checklists]
+           habitica (dailies | todos) (done | undo) (task-ids)
+                    [--checklists]
+           habitica habits (up | down) <task-ids> [--checklists]
+           habitica edit (habits | dailies | todos) (task-ids)
+                    [--text=<txt>] [--notes=<n>] [--checklist=<items>]
+                    [--tags=<tg>] [--difficulty=<d>] [--date=<dd>]
+           habitica [--version] [--help]
+                    [--verbose | --debug]
 
     Options:
       -h --help         Show this screen
       --version         Show version
+      --text=<txt>      Quoted string holding the name of the task
+      --notes=<n>       Quoted string holding the task's notes
+      --tags=<tg>       Comma-separated list of the task's tags
       --difficulty=<d>  (easy | medium | hard) [default: easy]
+      --date=<dd>       Task's due date, given as YYYY-MM-DD
       --verbose         Show some logging information
       --debug           Some all logging information
       -c --checklists   Toggle displaying checklists on or off
 
     The habitica commands are:
       status                  Show HP, XP, GP, and more
+      edit                    Change task fields, see below
       habits                  List habit tasks
       habits up <task-id>     Up (+) habit <task-id>
       habits down <task-id>   Down (-) habit <task-id>
@@ -279,6 +299,23 @@ def cli():
     delete`, you can pass one or more <task-id> parameters, using either
     comma-separated lists or ranges or both. For example, `todos done
     1,3,6-9,11`.
+
+    Editing existing tasks is done with the `edit` command. To edit a
+    task, specify the task's type (habit, daily, or todo) and all of the
+    fields you want to change. For example,
+
+        # Fix typo
+        habitica todos add Tautn English pig-dogs
+        habitica edit todos 1 --name="Taunt English pig-dogs"
+
+        # Bulk add tags
+        habitica edit todos 3,9,15-20 --tags=housechores,simple
+
+        # Bulk remove tags
+        habitica edit dailies 1,2,3 --tags=""
+
+        # Set due dates
+        habitica edit todos 5-9 --date=2000-01-01
 
     To show checklists with "todos" and "dailies" permanently, set
     'checklists' in your auth.cfg file to `checklists = true`.
@@ -309,7 +346,7 @@ def cli():
     set_checklists_status(auth, args)
 
     # GET server status
-    if args['<command>'] == 'server':
+    if args['server']:
         server = hbt.status()
         if server['status'] == 'up':
             print('Habitica server is up')
@@ -317,13 +354,13 @@ def cli():
             print('Habitica server down... or your computer cannot connect')
 
     # open HABITICA_TASKS_PAGE
-    elif args['<command>'] == 'home':
+    elif args['home']:
         home_url = '%s%s' % (auth['url'], HABITICA_TASKS_PAGE)
         print('Opening %s' % home_url)
         open_new_tab(home_url)
 
     # GET user
-    elif args['<command>'] == 'status':
+    elif args['status']:
 
         # gather status info
         user = hbt.user()
