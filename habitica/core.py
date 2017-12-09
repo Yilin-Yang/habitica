@@ -42,6 +42,13 @@ PRIORITY = {'easy': 1,
 AUTH_CONF = os.path.expanduser('~') + '/.config/habitica/auth.cfg'
 CACHE_CONF = os.path.expanduser('~') + '/.config/habitica/cache.cfg'
 
+TASK_FIELDS = ['--text',
+               '--notes',
+               '--checklist',
+               '--tags',
+               '--difficulty',
+               '--date', ]
+
 SECTION_CACHE_QUEST = 'Quest'
 checklists_on = False
 
@@ -201,6 +208,41 @@ def set_checklists_status(auth, args):
         checklists_on = not checklists_on
 
     return
+
+
+def extract_fields(args):
+    """
+    Extract the fields from user-supplied arguments
+
+    Takes in user-supplied arguments from docopt and grabs any task fields
+    it contains. Stores them in a dictionary whose keys are the names
+    of those fields as they would be given in a request to the Habitica
+    API.
+
+    e.g.
+    Possible Input:
+
+        {'--date': None,
+         '--debug': False,
+         '--difficulty': 'easy',
+         '--help': False,
+         '--notes': None,
+         '--tags': 'foo,bar',
+         '--text': 'Count to three',
+         '--verbose': False,
+         '--version': False, }
+
+    Output:
+        {'difficulty': 'easy',
+         'tags': 'foo,bar',
+         'text': 'Count to three', }
+    """
+
+    fields_and_values = {}
+    for field in TASK_FIELDS:
+        if field in args:
+            fields_and_values[field[2:]] = args[field]
+    return fields_and_values
 
 
 def cli():
