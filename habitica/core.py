@@ -42,12 +42,13 @@ PRIORITY = {'easy': 1,
 AUTH_CONF = os.path.expanduser('~') + '/.config/habitica/auth.cfg'
 CACHE_CONF = os.path.expanduser('~') + '/.config/habitica/cache.cfg'
 
-TASK_FIELDS = ['--text',
-               '--notes',
-               '--checklist',
-               '--tags',
-               '--difficulty',
-               '--date', ]
+# Dictionary between user arguments and corresponding
+# field in a JSON Habitica API request.
+TASK_FIELDS = {'--text': 'text',
+               '--notes': 'notes',
+               '--checklist': 'collapseChecklist',
+               '--difficulty': 'priority',
+               '--date': 'date', }
 
 SECTION_CACHE_QUEST = 'Quest'
 checklists_on = False
@@ -210,7 +211,7 @@ def set_checklists_status(auth, args):
     return
 
 
-def extract_fields(args):
+def fields_from_args(args):
     """
     Extract the fields from user-supplied arguments
 
@@ -218,6 +219,9 @@ def extract_fields(args):
     it contains. Stores them in a dictionary whose keys are the names
     of those fields as they would be given in a request to the Habitica
     API.
+
+    Does NOT retrieve the type of task being modified (e.g. 'todo', 'habit',
+    etc.). See `task_type_from_args(args)`.
 
     e.g.
     Possible Input:
@@ -239,33 +243,130 @@ def extract_fields(args):
     """
 
     fields_and_values = {}
-    for field in TASK_FIELDS:
-        if field in args:
-            fields_and_values[field[2:]] = args[field]
+    for arg, field in TASK_FIELDS.items():
+        if arg in args:
+            if arg == '--difficulty':
+                # Needs to be converted to a numerical value
+                new_val = PRIORITY[args[arg]]
+            else:
+                new_val = args[arg]
+            fields_and_values[field] = new_val
+
     return fields_and_values
+
+
+def task_type_from_args(args, grammatical_number):
+    """
+    Return the user's requested task type from command-line args.
+
+    Habitica names these fields differently depending on what type of
+    API call you're making, e.g. when creating a task, these strings
+    should be singular; but when getting all tasks of a particular type,
+    these strings should be plural.
+
+    Valid `grammatical_number` values are 'singular' and 'plural'.
+    """
+
+    if grammatical_number == 'singular':
+        if args['todos']:
+            return 'todo'
+        if args['habits']:
+            return 'habit'
+        if args['dailies']:
+            return 'daily'
+        raise Exception("No task type provided!")
+    elif grammatical_number == 'plural':
+        if args['todos']:
+            return 'todos'
+        if args['habits']:
+            return 'habits'
+        if args['dailies']:
+            return 'dailys'
+        raise Exception("No task type provided!")
+
+    raise Exception("Bad grammatical number! Accepted values are "
+                    "'singular' and 'plural'.")
+
+
+def get_tasks(hbt, task_type):
+    """
+    Return a list of incomplete tasks, from Habitica, of the requested type.
+
+    e.g.
+        get_tasks(hbt, 'habits')    # returns list of JSON habits for user
+        get_tasks(hbt, 'todos')     # ditto, for todos
+        get_tasks(hbt, 'dailys')    # ditto, for dailies
+    """
+    tasks = hbt.user.tasks(type=task_type)
+    return tasks
+    #return [e for e in hbt.user.tasks # TODO: why doesn't this work?
+    #        if not e['completed']]
+
+
+def write_new_fields(task_json, new_vals):
+    """Write new field values to a JSON file and return it"""
+    for field, new_val in new_vals.items():
+        task_json[field] = new_val
+    return task_json
+
+
+def add_task(hbt, args):
+    """Construct a new task of the given type and publish it."""
+
+    # Build a JSON API request as we go.
+    task_fields = {}
+
+    if '<args>' in args and args['<args>']:
+        # TODO: is this touched by the code if task name is empty?
+        task_fields['text'] = ' '.join(args['<args>'][1:])
+    elif '--text' in args:
+        task_fields['text'] = args['--text']
+    else:
+        raise Exception("No task name provided!")
+
+    task_fields['type'] = task_type_from_args(args, 'singular')
+    write_new_fields(task_fields, fields_from_args(args))
+    task_fields['_method'] = 'post'
+
+    hbt.user.tasks(**task_fields)
+
+
+def bulk_edit(hbt, action, args):
+    """Apply the user-requested changes to all of the given tasks."""
+
+    task_type = task_type_from_args(args, 'plural')
+    cur_tasks = get_tasks(hbt, task_type)
+
+    tids = get_task_ids(args['<task-ids>'])
+    for tid in tids:
+        if action == 'delete':
+            hbt.user.tasks(_id=cur_tasks[tid]['id'],
+                           _method='delete')
+        elif action == 'up' or action == 'down':
+            # Habits, dailies, and todos are all checked with "up"
+            # and unchecked/decremented with "down"
+            hbt.user.tasks(_id=cur_tasks[tid]['id'],
+                           _direction=action,
+                           _method='post')
+        elif action == 'edit':
+            task_fields = cur_tasks[tid]
+            write_new_fields(task_fields, fields_from_args(args))
+            task_fields['_method'] = 'put'
 
 
 def cli():
     """Habitica command-line interface.
 
     Usage: habitica (habits | dailies | todos | status | server | home)
-                    [--checklists]
-           habitica (habits | dailies | todos) add (task-name...)
-                    [--checklists]
-           habitica (habits | dailies | todos) add
-                    (--text=<txt>) [--notes=<n>] [--checklist=<items>]
-                    [--tags=<tg>] [--difficulty=<d>] [--date=<dd>]
-                    [--checklists]
-           habitica (habits | dailies | todos) delete (task-ids)
-                    [--checklists]
-           habitica (dailies | todos) (done | undo) (task-ids)
-                    [--checklists]
-           habitica habits (up | down) <task-ids> [--checklists]
-           habitica edit (habits | dailies | todos) (task-ids)
-                    [--text=<txt>] [--notes=<n>] [--checklist=<items>]
-                    [--tags=<tg>] [--difficulty=<d>] [--date=<dd>]
-           habitica [--version] [--help]
-                    [--verbose | --debug]
+                    [options]
+           habitica (habits | dailies | todos) add (task-name...) [options]
+           habitica (habits | dailies | todos) add [options]
+           habitica (habits | dailies | todos) delete <task-ids> [options]
+           habitica (dailies | todos) (done | undo) <task-ids> [options]
+           habitica habits (up | down) <task-ids> [options]
+           habitica edit (habits | dailies | todos) <task-ids> [options]
+           habitica --help
+           habitica --version
 
     Options:
       -h --help         Show this screen
@@ -452,87 +553,29 @@ def cli():
         print('%s %s' % ('Party:'.rjust(len_ljust, ' '), party))
         print('%s %s' % ('Quest:'.rjust(len_ljust, ' '), quest))
 
-    # GET/POST habits
-    elif args['<command>'] == 'habits':
-        habits = hbt.user.tasks(type='habits')
-        if 'up' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                tval = habits[tid]['value']
-                hbt.user.tasks(_id=habits[tid]['id'],
-                               _direction='up', _method='post')
-                print('incremented task \'%s\''
-                      % habits[tid]['text'].encode('utf8'))
-                habits[tid]['value'] = tval + (TASK_VALUE_BASE ** tval)
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-        elif 'down' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                tval = habits[tid]['value']
-                hbt.user.tasks(_id=habits[tid]['id'],
-                               _direction='down', _method='post')
-                print('decremented task \'%s\''
-                      % habits[tid]['text'].encode('utf8'))
-                habits[tid]['value'] = tval - (TASK_VALUE_BASE ** tval)
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-        for i, task in enumerate(habits):
-            score = qualitative_task_score_from_value(task['value'])
-            print('[%s] %s %s' % (score, i + 1, task['text'].encode('utf8')))
+    # Manipulating task objects
+    else:
+        # Singleton task manipulation
+        if args['add']:
+            add_task(hbt, args)
 
-    # GET/PUT tasks:daily
-    elif args['<command>'] == 'dailies':
-        dailies = hbt.user.tasks(type='dailys')
-        if 'done' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                hbt.user.tasks(_id=dailies[tid]['id'],
-                               _direction='up', _method='post')
-                print('marked daily \'%s\' completed'
-                      % dailies[tid]['text'].encode('utf8'))
-                dailies[tid]['completed'] = True
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-        elif 'undo' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                hbt.user.tasks(_id=dailies[tid]['id'],
-                               _method='put', completed=False)
-                print('marked daily \'%s\' incomplete'
-                      % dailies[tid]['text'].encode('utf8'))
-                dailies[tid]['completed'] = False
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-        print_task_list(dailies)
+        # Bulk task manipulation
+        elif args['delete']:
+            bulk_edit(hbt, 'delete', args)
 
-    # GET tasks:todo
-    elif args['<command>'] == 'todos':
-        todos = [e for e in hbt.user.tasks(type='todos')
-                 if not e['completed']]
-        if 'done' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                hbt.user.tasks(_id=todos[tid]['id'],
-                               _direction='up', _method='post')
-                print('marked todo \'%s\' complete'
-                      % todos[tid]['text'].encode('utf8'))
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-            todos = updated_task_list(todos, tids)
-        elif 'add' in args['<args>']:
-            ttext = ' '.join(args['<args>'][1:])
-            hbt.user.tasks(type='todo',
-                           text=ttext,
-                           priority=PRIORITY[args['--difficulty']],
-                           _method='post')
-            todos.insert(0, {'completed': False, 'text': ttext})
-            print('added new todo \'%s\'' % ttext)
-        elif 'delete' in args['<args>']:
-            tids = get_task_ids(args['<args>'][1:])
-            for tid in tids:
-                hbt.user.tasks(_id=todos[tid]['id'],
-                               _method='delete')
-                print('deleted todo \'%s\''
-                      % todos[tid]['text'])
-                sleep(HABITICA_REQUEST_WAIT_TIME)
-            todos = updated_task_list(todos, tids)
-        print_task_list(todos)
+        elif args['done'] or args['up']:
+            bulk_edit(hbt, 'up', args)
+
+        elif args['undo'] or args['down']:
+            bulk_edit(hbt, 'down', args)
+
+        elif args['edit']:
+            bulk_edit(hbt, 'edit', args)
+
+        print_task_list(get_tasks(hbt,
+                                  task_type_from_args(args, 'plural')
+                                  )
+                        )
 
 
 if __name__ == '__main__':
