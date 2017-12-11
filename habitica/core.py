@@ -132,19 +132,20 @@ def get_task_ids(tids):
     handle task-id formats such as:
         habitica todos done 3
         habitica todos done 1,2,3
-        habitica todos done 2 3
-        habitica todos done 1-3,4 8
-    tids is a seq like (last example above) ('1-3,4' '8')
+        habitica todos done 1-3,5
+
+    `tids` is a string consisting of comma-separated tokens that can be:
+    - A single number (e.g. '3')
+    - A range of numbers (e.g. '1-3')
     """
     logging.debug('raw task ids: %s' % tids)
     task_ids = []
-    for raw_arg in tids:
-        for bit in raw_arg.split(','):
-            if '-' in bit:
-                start, stop = [int(e) for e in bit.split('-')]
-                task_ids.extend(range(start, stop + 1))
-            else:
-                task_ids.append(int(bit))
+    for token in tids.split(','):
+        if '-' in token:
+            start, stop = [int(e) for e in token.split('-')]
+            task_ids.extend(range(start, stop + 1))
+        else:
+            task_ids.append(int(token))
     return [e - 1 for e in set(task_ids)]
 
 
@@ -316,14 +317,7 @@ def add_task(hbt, args):
     # Build a JSON API request as we go.
     task_fields = {}
 
-    if '<args>' in args and args['<args>']:
-        # TODO: is this touched by the code if task name is empty?
-        task_fields['text'] = ' '.join(args['<args>'][1:])
-    elif '--text' in args:
-        task_fields['text'] = args['--text']
-    else:
-        raise Exception("No task name provided!")
-
+    task_fields['text'] = args['--text']
     task_fields['type'] = task_type_from_args(args, 'singular')
     write_new_fields(task_fields, fields_from_args(args))
     task_fields['_method'] = 'post'
@@ -339,19 +333,19 @@ def bulk_edit(hbt, action, args):
 
     tids = get_task_ids(args['<task-ids>'])
     for tid in tids:
+        task_fields = cur_tasks[tid]
         if action == 'delete':
-            hbt.user.tasks(_id=cur_tasks[tid]['id'],
-                           _method='delete')
+            task_fields['_method'] = 'delete'
         elif action == 'up' or action == 'down':
             # Habits, dailies, and todos are all checked with "up"
             # and unchecked/decremented with "down"
-            hbt.user.tasks(_id=cur_tasks[tid]['id'],
-                           _direction=action,
-                           _method='post')
+            task_fields['direction'] = action
+            task_fields['_method'] = 'post'
         elif action == 'edit':
-            task_fields = cur_tasks[tid]
             write_new_fields(task_fields, fields_from_args(args))
             task_fields['_method'] = 'put'
+
+        hbt.user.tasks(**task_fields)
 
 
 def cli():
@@ -359,12 +353,11 @@ def cli():
 
     Usage: habitica (habits | dailies | todos | status | server | home)
                     [options]
-           habitica (habits | dailies | todos) add (task-name...) [options]
            habitica (habits | dailies | todos) add [options]
+           habitica (habits | dailies | todos) edit <task-ids> [options]
            habitica (habits | dailies | todos) delete <task-ids> [options]
            habitica (dailies | todos) (done | undo) <task-ids> [options]
            habitica habits (up | down) <task-ids> [options]
-           habitica edit (habits | dailies | todos) <task-ids> [options]
            habitica --help
            habitica --version
 
