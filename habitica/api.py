@@ -58,6 +58,9 @@ class Habitica(object):
                 uri = '%s/%s/%s' % (uri,
                                     self.aspect,
                                     self.resource)
+            elif self.aspect == 'tags':
+                uri = '%s/%s' % (uri,
+                                 self.aspect)
             else:
                 uri = '%s/%s/%s' % (uri,
                                     self.resource,

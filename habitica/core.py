@@ -127,12 +127,13 @@ def update_quest_cache(configfile, **kwargs):
     return cache
 
 
-def get_task_ids(tids):
+def parse_list_indices(tids):
     """
     handle task-id formats such as:
         habitica todos done 3
         habitica todos done 1,2,3
         habitica todos done 1-3,5
+        habitica tags delete 1-3
 
     `tids` is a string consisting of comma-separated tokens that can be:
     - A single number (e.g. '3')
@@ -169,6 +170,13 @@ def cl_item_count(task):
         return len(task['checklist'])
     else:
         return 0
+
+
+def print_tags_list(tags):
+    for i, tag in enumerate(tags):
+        tag_line = '[*] %s %s' % (i + 1,
+                                  tag['name'])
+        print(tag_line)
 
 
 def print_task_list(tasks):
@@ -289,6 +297,39 @@ def task_type_from_args(args, grammatical_number):
                     "'singular' and 'plural'.")
 
 
+def get_tags(hbt):
+    """Return all of the user's tags."""
+    return hbt.user.tags()
+
+
+def add_tag(hbt, args):
+    """Construct a tag of the given type and then publish it."""
+    hbt.user.tags(name=args['--text'],
+                  _method='post')
+
+
+def delete_tags(hbt, args):
+    """Apply the user-requested changes to all of the given tags."""
+    tids = parse_list_indices(args['<task-ids>'])
+    cur_tags = get_tags(hbt)
+
+    # get tag ids
+    for i in tids:
+        tag_fields = cur_tags[i]
+        tag_fields['_id'] = tag_fields['id']
+        tag_fields['_method'] = 'delete'
+        hbt.user.tags(**tag_fields)
+
+
+def rename_tag(hbt, args):
+    # if tag is string, find corresponding tag
+    # if tag is index, find corresponding tag
+    # handle edge case where multiple tags have the same name
+    tag_fields = {_method: 'put',
+                  name: args['--text']}
+
+
+
 def get_tasks(hbt, task_type):
     """
     Return a list of incomplete tasks, from Habitica, of the requested type.
@@ -325,13 +366,14 @@ def add_task(hbt, args):
     hbt.user.tasks(**task_fields)
 
 
-def bulk_edit(hbt, action, args):
+# TODO: figure out a more elegant way to implement this
+def bulk_edit_tasks(hbt, action, args):
     """Apply the user-requested changes to all of the given tasks."""
 
     task_type = task_type_from_args(args, 'plural')
     cur_tasks = get_tasks(hbt, task_type)
 
-    tids = get_task_ids(args['<task-ids>'])
+    tids = parse_list_indices(args['<task-ids>'])
     for tid in tids:
         task_fields = cur_tasks[tid]
         if action == 'delete':
@@ -348,14 +390,15 @@ def bulk_edit(hbt, action, args):
         hbt.user.tasks(**task_fields)
 
 
+# TODO: DRY the manipulable objects
 def cli():
     """Habitica command-line interface.
 
-    Usage: habitica (habits | dailies | todos | status | server | home)
+    Usage: habitica (habits | dailies | todos | tags | status | server | home)
                     [options]
-           habitica (habits | dailies | todos) add [options]
+           habitica (habits | dailies | todos | tags) add [options]
            habitica (habits | dailies | todos) edit <task-ids> [options]
-           habitica (habits | dailies | todos) delete <task-ids> [options]
+           habitica (habits | dailies | todos | tags) delete <task-ids> [options]
            habitica (dailies | todos) (done | undo) <task-ids> [options]
            habitica habits (up | down) <task-ids> [options]
            habitica --help
@@ -547,28 +590,44 @@ def cli():
         print('%s %s' % ('Quest:'.rjust(len_ljust, ' '), quest))
 
     # Manipulating task objects
-    else:
+    elif args['todos'] or args['habits'] or args['dailies']:
         # Singleton task manipulation
         if args['add']:
             add_task(hbt, args)
 
         # Bulk task manipulation
         elif args['delete']:
-            bulk_edit(hbt, 'delete', args)
+            bulk_edit_tasks(hbt, 'delete', args)
 
         elif args['done'] or args['up']:
-            bulk_edit(hbt, 'up', args)
+            bulk_edit_tasks(hbt, 'up', args)
 
         elif args['undo'] or args['down']:
-            bulk_edit(hbt, 'down', args)
+            bulk_edit_tasks(hbt, 'down', args)
 
         elif args['edit']:
-            bulk_edit(hbt, 'edit', args)
+            bulk_edit_tasks(hbt, 'edit', args)
 
         print_task_list(get_tasks(hbt,
                                   task_type_from_args(args, 'plural')
                                   )
                         )
+
+    # Manipulating tags
+    elif args['tags']:
+        # TODO: expand
+
+        if args['add']:
+            add_tag(hbt, args)  # TODO: implement
+
+        # Bulk tag manipulation
+        elif args['delete']:
+            delete_tags(hbt, args)
+
+        elif args['edit']:
+            bulk_edit_tags(hbt, 'edit', args)
+
+        print_tags_list(get_tags(hbt))
 
 
 if __name__ == '__main__':
