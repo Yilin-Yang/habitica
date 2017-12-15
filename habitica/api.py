@@ -47,7 +47,10 @@ class Habitica(object):
         # get involved in the API itself and... help it.
         if self.aspect:
             aspect_id = kwargs.pop('_id', None)
+            if aspect_id is None:
+                aspect_id = kwargs.pop('id', None)
             direction = kwargs.pop('_direction', None)
+
             uri = '%s/%s' % (self.auth['url'],
                              API_URI_BASE)
             if aspect_id is not None:
