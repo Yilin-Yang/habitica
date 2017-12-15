@@ -162,12 +162,6 @@ def parse_list_strings(tstrs):
     return tstrs.split(',')
 
 
-def updated_task_list(tasks, tids):
-    for tid in sorted(tids, reverse=True):
-        del(tasks[tid])
-    return tasks
-
-
 def cl_done_count(task):
     items = task['checklist']
     count = 0
@@ -378,8 +372,6 @@ def get_tasks(hbt, task_type):
     """
     tasks = hbt.user.tasks(type=task_type)
     return tasks
-    #return [e for e in hbt.user.tasks # TODO: why doesn't this work?
-    #        if not e['completed']]
 
 
 def write_new_fields(task_json, new_vals):
