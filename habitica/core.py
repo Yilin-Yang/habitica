@@ -150,6 +150,18 @@ def parse_list_indices(tids):
     return [e - 1 for e in set(task_ids)]
 
 
+def parse_list_strings(tstrs):
+    """
+    handle task/tag names such as:
+        habitica tags delete Work,School
+        habitica tags rename Home --text="Housekeeping"
+
+    `tstrs` is a string of comma-separated strings.
+    """
+    logging.debug('raw task names: %s' % tstrs)
+    return tstrs.split(',')
+
+
 def updated_task_list(tasks, tids):
     for tid in sorted(tids, reverse=True):
         del(tasks[tid])
@@ -302,6 +314,32 @@ def get_tags(hbt):
     return hbt.user.tags()
 
 
+def get_these_tags(hbt, args):
+    """Return the tags corresponding to these indices or names."""
+    cur_tags = get_tags(hbt)
+    ret_tags = []
+    try:
+        # parse_list_indices fails if given tag names
+        tids = parse_list_indices(args['<task-ids>'])
+        for i in tids:
+            ret_tags.append(cur_tags[i])
+
+    except ValueError:
+        if ret_tags:
+            raise Exception("Combined numerical and string-based indexing!")
+        tstrs = parse_list_strings(args['<task-ids>'])
+        for s in tstrs:
+            for tag in cur_tags:
+                if s == tag['name']:
+                    ret_tags.append(tag)
+                    break
+
+    #for t in ret_tags:
+    #    t['_id'] = t['id']
+
+    return ret_tags
+
+
 def add_tag(hbt, args):
     """Construct a tag of the given type and then publish it."""
     hbt.user.tags(name=args['--text'],
@@ -310,29 +348,28 @@ def add_tag(hbt, args):
 
 def delete_tags(hbt, args):
     """Apply the user-requested changes to all of the given tags."""
-    tids = parse_list_indices(args['<task-ids>'])
-    cur_tags = get_tags(hbt)
 
-    # get tag ids
-    for i in tids:
-        tag_fields = cur_tags[i]
-        tag_fields['_id'] = tag_fields['id']
-        tag_fields['_method'] = 'delete'
-        hbt.user.tags(**tag_fields)
+    # Populate a list with JSON API requests
+    to_delete = get_these_tags(hbt, args)
+
+    for t in to_delete:
+        t['_method'] = 'delete'
+        hbt.user.tags(**t)
 
 
 def rename_tag(hbt, args):
-    # if tag is string, find corresponding tag
-    # if tag is index, find corresponding tag
-    # handle edge case where multiple tags have the same name
-    tag_fields = {_method: 'put',
-                  name: args['--text']}
-
+    tags = get_these_tags(hbt, args)
+    if len(tags) > 1:
+        raise ValueError("Can't rename multiple tags at once!")
+    tag_fields = tags[0]
+    tag_fields['_method'] = 'put'
+    tag_fields['name'] = args['--text']
+    hbt.user.tags(**tag_fields)
 
 
 def get_tasks(hbt, task_type):
     """
-    Return a list of incomplete tasks, from Habitica, of the requested type.
+    Return a list of tasks, from Habitica, of the requested type.
 
     e.g.
         get_tasks(hbt, 'habits')    # returns list of JSON habits for user
@@ -397,7 +434,7 @@ def cli():
     Usage: habitica (habits | dailies | todos | tags | status | server | home)
                     [options]
            habitica (habits | dailies | todos | tags) add [options]
-           habitica (habits | dailies | todos) edit <task-ids> [options]
+           habitica (habits | dailies | todos | tags) edit <task-ids> [options]
            habitica (habits | dailies | todos | tags) delete <task-ids> [options]
            habitica (dailies | todos) (done | undo) <task-ids> [options]
            habitica habits (up | down) <task-ids> [options]
@@ -436,6 +473,14 @@ def cli():
     delete`, you can pass one or more <task-id> parameters, using either
     comma-separated lists or ranges or both. For example, `todos done
     1,3,6-9,11`.
+
+    For `tags delete` or `[TASK_TYPE] edit --tags=`, you can pass
+    in (a comma-separated list of) the name(s) of the tags to delete or apply.
+    This is case-sensitive.
+
+    *Be warned that Habitica allows you to create multiple tags with the
+    exact same namestring. If your account has multiple tags with the same
+    name string, manipulating tags by name will produce undefined behavior.*
 
     Editing existing tasks is done with the `edit` command. To edit a
     task, specify the task's type (habit, daily, or todo) and all of the
@@ -625,7 +670,7 @@ def cli():
             delete_tags(hbt, args)
 
         elif args['edit']:
-            bulk_edit_tags(hbt, 'edit', args)
+            rename_tag(hbt, args)
 
         print_tags_list(get_tags(hbt))
 
