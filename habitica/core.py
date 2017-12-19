@@ -40,6 +40,7 @@ PRIORITY = {'easy': 1,
             'medium': 1.5,
             'hard': 2}
 AUTH_CONF = os.path.expanduser('~') + '/.config/habitica/auth.cfg'
+TEST_AUTH_CONF = os.path.expanduser('~') + '/.config/habitica/test_auth.cfg'
 CACHE_CONF = os.path.expanduser('~') + '/.config/habitica/cache.cfg'
 
 # Dictionary between user arguments and corresponding
@@ -444,6 +445,7 @@ def cli():
       --verbose         Show some logging information
       --debug           Some all logging information
       -c --checklists   Toggle displaying checklists on or off
+      -t --test         Use test_auth credentials, not regular credentials
 
     The habitica commands are:
       status                  Show HP, XP, GP, and more
@@ -508,7 +510,10 @@ def cli():
                   ', '.join("'%s': '%s'" % (k, v) for k, v in args.items()))
 
     # Set up auth
-    auth = load_auth(AUTH_CONF)
+    if args['--test']:  # TODO: does this work with the short option?
+        auth = load_auth(TEST_AUTH_CONF)
+    else:
+        auth = load_auth(AUTH_CONF)
 
     # Prepare cache
     cache = load_cache(CACHE_CONF)
