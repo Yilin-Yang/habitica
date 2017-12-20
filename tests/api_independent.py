@@ -10,6 +10,8 @@ import os
 import sys
 import unittest
 
+import helpers
+
 # Make sure we're using dev files, not the installed package
 sys.path.insert(0, os.path.abspath('..'))
 import habitica
@@ -17,23 +19,9 @@ import habitica.core
 import habitica.taskmanip
 
 
-class TestInfoPrintOptions(unittest.TestCase):
+class TestInfoPrintOptions(helpers.TerminalOutputTestCase):
 
     term_output = StringIO()
-
-    def setUp(self):
-        """Redirect terminal output to a StringIO object."""
-        self.term_output = StringIO()
-        sys.stdout = self.term_output
-
-    def tearDown(self):
-        self.term_output.close()
-
-    def callScript(self, *args):
-        sys.argv = args
-        habitica.cli()
-        sys.stdout = sys.__stdout__  # Without this, assertions fail
-        return self.term_output.getvalue()
 
     def test_server_option(self):
         output = self.callScript('habitica', 'server')
@@ -92,7 +80,7 @@ class TestWriteNewFields(unittest.TestCase):
         self.assertTrue(output == self.correct)
 
 
-class TestPrintTasks(unittest.TestCase):
+class TestPrintTasks(helpers.TerminalOutputTestCase):
 
     task_1 = {
         u'attribute': u'str',
@@ -146,37 +134,26 @@ class TestPrintTasks(unittest.TestCase):
         u'createdAt': u'2017-12-06T05:31:47.433Z'
     }
 
-    def setUp(self):
-        """Redirect terminal output to a StringIO object."""
-        self.term_output = StringIO()
-        sys.stdout = self.term_output
-
-    def tearDown(self):
-        self.term_output.close()
-
-    def callFunction(self, task_list):
-        habitica.core.print_task_list(task_list)
-        sys.stdout = sys.__stdout__  # Without this, assertions fail
-        return self.term_output.getvalue()
-
     def test_empty(self):
         task_list = []
-        output = self.callFunction(task_list)
+        output = self.callFunction(habitica.core.print_task_list, task_list)
         self.assertTrue(output == '')
 
     def test_single(self):
-        output = self.callFunction([self.task_1])
+        output = self.callFunction(habitica.core.print_task_list,
+                                   [self.task_1])
         self.assertTrue(output == '[ ] 1 foo\n')
 
     def test_standard(self):
-        output = self.callFunction([self.task_1, self.task_2])
+        output = self.callFunction(habitica.core.print_task_list,
+                                   [self.task_1, self.task_2])
         self.assertTrue(output == ('[ ] 1 foo\n'
                                    '[ ] 2 bar\n'))
 
     # TODO: add test cases for printing with checklists
 
 
-class TestPrintTags(unittest.TestCase):
+class TestPrintTags(helpers.TerminalOutputTestCase):
 
     tag_1 = {u'name': u'foo',
              u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
@@ -184,29 +161,17 @@ class TestPrintTags(unittest.TestCase):
     tag_2 = {u'name': u'bar',
              u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
 
-    def setUp(self):
-        """Redirect terminal output to a StringIO object."""
-        self.term_output = StringIO()
-        sys.stdout = self.term_output
-
-    def tearDown(self):
-        self.term_output.close()
-
-    def callFunction(self, tag_list):
-        habitica.core.print_tags_list(tag_list)
-        sys.stdout = sys.__stdout__  # Without this, assertions fail
-        return self.term_output.getvalue()
-
     def test_empty(self):
-        output = self.callFunction([])
+        output = self.callFunction(habitica.core.print_tags_list, [])
         self.assertTrue(output == '')
 
     def test_single(self):
-        output = self.callFunction([self.tag_1])
+        output = self.callFunction(habitica.core.print_tags_list, [self.tag_1])
         self.assertTrue(output == '[#] 1 foo\n')
 
     def test_standard(self):
-        output = self.callFunction([self.tag_1, self.tag_2])
+        output = self.callFunction(habitica.core.print_tags_list,
+                                   [self.tag_1, self.tag_2])
         self.assertTrue(output == ('[#] 1 foo\n'
                                    '[#] 2 bar\n'))
 
