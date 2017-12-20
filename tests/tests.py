@@ -262,13 +262,131 @@ class TestParseListStrings(unittest.TestCase):
     def test_empty(self):
         task_strings = ''
         output = habitica.core.parse_list_strings(task_strings)
-        print(output)
         self.assertTrue(output == [])
 
     def test_one_value(self):
         task_strings = 'foo'
         output = habitica.core.parse_list_strings(task_strings)
         self.assertTrue(output == ['foo'])
+
+
+class TestPrintTasks(unittest.TestCase):
+
+    task_1 = {
+        u'attribute': u'str',
+        u'checklist': [],
+        u'group':
+            {u'approval':
+                {u'requested': False,
+                 u'required': False,
+                 u'approved': False},
+                u'assignedUsers': []},
+        u'collapseChecklist': False,
+        u'tags': [],
+        u'text': u'foo',
+        u'challenge': {},
+        u'userId': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'value': -1,
+        u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'priority': 1,
+        u'completed': False,
+        u'notes': u'',
+        u'updatedAt': u'2017-12-06T14:47:58.370 Z',
+        u'_id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'type': u'todo',
+        u'reminders': [],
+        u'createdAt': u'2017-12-06T05:31:47.433Z'
+    }
+
+    task_2 = {
+        u'attribute': u'str',
+        u'checklist': [],
+        u'group':
+            {u'approval':
+                {u'requested': False,
+                 u'required': False,
+                 u'approved': False},
+                u'assignedUsers': []},
+        u'collapseChecklist': False,
+        u'tags': [],
+        u'text': u'bar',
+        u'challenge': {},
+        u'userId': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'value': -1,
+        u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'priority': 1,
+        u'completed': False,
+        u'notes': u'',
+        u'updatedAt': u'2017-12-06T14:47:58.370 Z',
+        u'_id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        u'type': u'todo',
+        u'reminders': [],
+        u'createdAt': u'2017-12-06T05:31:47.433Z'
+    }
+
+    def setUp(self):
+        """Redirect terminal output to a StringIO object."""
+        self.term_output = StringIO()
+        sys.stdout = self.term_output
+
+    def tearDown(self):
+        self.term_output.close()
+
+    def callFunction(self, task_list):
+        habitica.core.print_task_list(task_list)
+        sys.stdout = sys.__stdout__  # Without this, assertions fail
+        return self.term_output.getvalue()
+
+    def test_empty(self):
+        task_list = []
+        output = self.callFunction(task_list)
+        self.assertTrue(output == '')
+
+    def test_single(self):
+        output = self.callFunction([self.task_1])
+        self.assertTrue(output == '[ ] 1 foo\n')
+
+    def test_standard(self):
+        output = self.callFunction([self.task_1, self.task_2])
+        self.assertTrue(output == ('[ ] 1 foo\n'
+                                   '[ ] 2 bar\n'))
+
+    # TODO: add test cases for printing with checklists
+
+
+class TestPrintTags(unittest.TestCase):
+
+    tag_1 = {u'name': u'foo',
+             u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+
+    tag_2 = {u'name': u'bar',
+             u'id': u'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+
+    def setUp(self):
+        """Redirect terminal output to a StringIO object."""
+        self.term_output = StringIO()
+        sys.stdout = self.term_output
+
+    def tearDown(self):
+        self.term_output.close()
+
+    def callFunction(self, tag_list):
+        habitica.core.print_tags_list(tag_list)
+        sys.stdout = sys.__stdout__  # Without this, assertions fail
+        return self.term_output.getvalue()
+
+    def test_empty(self):
+        output = self.callFunction([])
+        self.assertTrue(output == '')
+
+    def test_single(self):
+        output = self.callFunction([self.tag_1])
+        self.assertTrue(output == '[#] 1 foo\n')
+
+    def test_standard(self):
+        output = self.callFunction([self.tag_1, self.tag_2])
+        self.assertTrue(output == ('[#] 1 foo\n'
+                                   '[#] 2 bar\n'))
 
 
 if __name__ == '__main__':
