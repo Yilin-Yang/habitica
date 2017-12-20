@@ -12,7 +12,7 @@ import habitica
 import habitica.core
 
 
-class TestFieldExtraction(unittest.TestCase):
+class TestFieldsFromArgs(unittest.TestCase):
     def test_field_extraction_only_valid(self):
         args = {'--date': '2017-12-01',
                 '--difficulty': 'easy', }
@@ -185,6 +185,71 @@ class TestTaskTypeFromArgs(unittest.TestCase):
                 'todos': True}      # User requests todos
         with self.assertRaises(Exception):
             habitica.core.task_type_from_args(args, 'singulra')
+
+
+class TestWriteNewFields(unittest.TestCase):
+
+    def setUp(self):
+        self.cur_vals = {'name': 'moo',
+                         'holy': 'mail',
+                         'may': 'may'}
+        self.correct = self.cur_vals  # modify in test-case
+
+    def test_standard_input(self):
+        new_vals = {'name': 'foo',
+                    'holy': 'grail'}
+        self.correct = new_vals
+        self.correct['may'] = 'may'
+
+        output = habitica.core.write_new_fields(self.cur_vals, new_vals)
+
+        self.assertTrue(output == self.correct)
+
+    def test_null_input(self):
+        new_vals = {}
+        output = habitica.core.write_new_fields(self.cur_vals, new_vals)
+        self.assertTrue(output == self.correct)
+
+    def test_one_replacement(self):
+        new_vals = {'name': 'foo'}
+        self.correct['name'] = 'foo'
+
+        output = habitica.core.write_new_fields(self.cur_vals, new_vals)
+        self.assertTrue(output == self.correct)
+
+    def test_total_replacement(self):
+        new_vals = {'name': 'foo',
+                    'holy': 'grail',
+                    'may': 'bae'}
+        self.correct = new_vals
+
+        output = habitica.core.write_new_fields(self.cur_vals, new_vals)
+
+        self.assertTrue(output == self.correct)
+
+
+class TestParseListIndices(unittest.TestCase):
+
+    def test_standard_input(self):
+        task_ids = '1,2-3,9,15-17'
+        output = habitica.core.parse_list_indices(task_ids)
+        self.assertTrue(output == [0, 1, 2, 8, 14, 15, 16])
+
+    def test_empty(self):
+        task_ids = ''
+        output = habitica.core.parse_list_indices(task_ids)
+        self.assertTrue(output == [])
+
+    def test_one_value(self):
+        task_ids = '23'
+        output = habitica.core.parse_list_indices(task_ids)
+        self.assertTrue(output == [22])
+
+    def test_out_of_order(self):
+        task_ids = '17, 1, 5-3'
+        output = habitica.core.parse_list_indices(task_ids)
+        output.sort()  # not guaranteed to return a sorted list
+        self.assertTrue(output == [0, 2, 3, 4, 16])
 
 
 if __name__ == '__main__':
