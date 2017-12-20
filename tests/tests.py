@@ -252,5 +252,24 @@ class TestParseListIndices(unittest.TestCase):
         self.assertTrue(output == [0, 2, 3, 4, 16])
 
 
+class TestParseListStrings(unittest.TestCase):
+
+    def test_standard_input(self):
+        task_strings = 'foo,bar,moo,gar'
+        output = habitica.core.parse_list_strings(task_strings)
+        self.assertTrue(output == ['foo', 'bar', 'moo', 'gar'])
+
+    def test_empty(self):
+        task_strings = ''
+        output = habitica.core.parse_list_strings(task_strings)
+        print(output)
+        self.assertTrue(output == [])
+
+    def test_one_value(self):
+        task_strings = 'foo'
+        output = habitica.core.parse_list_strings(task_strings)
+        self.assertTrue(output == ['foo'])
+
+
 if __name__ == '__main__':
     unittest.main()

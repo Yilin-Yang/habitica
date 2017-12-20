@@ -165,6 +165,8 @@ def parse_list_strings(tstrs):
     `tstrs` is a string of comma-separated strings.
     """
     logging.debug('raw task names: %s' % tstrs)
+    if tstrs == '':
+        return []
     return tstrs.split(',')
 
 
