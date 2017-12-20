@@ -188,7 +188,7 @@ def cl_item_count(task):
 
 def print_tags_list(tags):
     for i, tag in enumerate(tags):
-        tag_line = '[*] %s %s' % (i + 1,
+        tag_line = '[#] %s %s' % (i + 1,
                                   tag['name'])
         print(tag_line)
 
