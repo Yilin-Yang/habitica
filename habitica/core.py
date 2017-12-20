@@ -145,9 +145,14 @@ def parse_list_indices(tids):
     for token in tids.split(','):
         if '-' in token:
             start, stop = [int(e) for e in token.split('-')]
+            if start > stop:
+                start, stop = stop, start
             task_ids.extend(range(start, stop + 1))
+        elif token == '':
+            return []
         else:
             task_ids.append(int(token))
+
     return [e - 1 for e in set(task_ids)]
 
 
