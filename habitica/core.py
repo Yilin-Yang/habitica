@@ -15,6 +15,7 @@ TODO:philadams get logger named, like requests!
 from bisect import bisect
 import logging
 import os.path
+import sys
 from webbrowser import open_new_tab
 
 from docopt import docopt
@@ -287,6 +288,7 @@ def cli():
                     [options]
            habitica (dailies | todos) (done | undo) <task-ids> [options]
            habitica habits (up | down) <task-ids> [options]
+           habitica reset [options]
            habitica --help
            habitica --version
 
@@ -318,6 +320,8 @@ def cli():
       todos delete <task-id>  Delete one or more todo <task-id>
       server                  Show status of Habitica service
       home                    Open tasks page in default browser
+      reset                   Restarts account from scratch, deleting
+                              everything.
 
     For `habits up|down`, `dailies done|undo`, `todos done`, and `todos
     delete`, you can pass one or more <task-id> parameters, using either
@@ -380,8 +384,30 @@ def cli():
     # Flag checklists as on if true in the config
     set_checklists_status(auth, args)
 
+    # Reset user account
+    if args['reset']:
+        print_status(hbt, cache)
+        print("========================================"
+              "========================================\n")
+        print(" WARNING: All tags and tasks for the user above "
+              "will be deleted!\n")
+        print("========================================"
+              "========================================\n\n")
+
+        while True:
+            decision = raw_input("Are you sure you want to proceed? (Y\\n)")
+            if decision == 'N' or decision == 'n':
+                print("Exiting.")
+                sys.exit(0)
+            elif decision == 'Y' or decision == 'y':
+                break
+            else:
+                print("Invalid input! Please type 'Y' or 'n', "
+                      " without the quotes.")
+        hbt.user.reset(_method='post')
+
     # GET server status
-    if args['server']:
+    elif args['server']:
         server = hbt.status()
         if server['status'] == 'up':
             print('Habitica server is up')
