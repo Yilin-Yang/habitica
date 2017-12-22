@@ -16,6 +16,7 @@ import habitica.argparse
 
 
 class TestFieldsFromArgs(unittest.TestCase):
+
     def test_field_extraction_only_valid(self):
         args = {'--date': '2017-12-01',
                 '--difficulty': 'easy', }
