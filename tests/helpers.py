@@ -15,6 +15,40 @@ sys.path.insert(0, os.path.abspath('..'))
 import habitica
 
 
+def runAndRedirect(to_run, *args, **kwargs):
+    """
+    Call the to_run object, returning everything it printed from stdout.
+
+    This redirects ALL output from stdout for the duration of the
+    function call.
+    """
+    assert(callable(to_run))
+    term_output = _redirectStdout()
+    to_run(*args, **kwargs)
+    output = _getStringAndClose(term_output)
+    _resetStdout()
+    return output
+
+
+def _redirectStdout():
+    """Redirect terminal output to a StringIO object."""
+    term_output = StringIO()
+    sys.stdout = term_output
+    return term_output
+
+
+def _resetStdout():
+    """Without doing this, assertions that compare strings seem to fail."""
+    sys.stdout = sys.__stdout__
+
+
+def _getStringAndClose(io):
+    """Yank and return the contents of the StringIO object and close it."""
+    output = io.getvalue()
+    io.close()
+    return output
+
+
 class TerminalOutputTestCase(unittest.TestCase):
     """
     Base class for unit tests that evaluate terminal output.
@@ -36,14 +70,8 @@ class TerminalOutputTestCase(unittest.TestCase):
                 list of the flags you want to pass to the habitica script, e.g.
                     self.callScript('todos', 'add', '--text="foo"')
         """
-        term_output = self._redirectStdout()
-
         sys.argv = cli_args
-        habitica.cli()
-
-        self._resetStdout()
-
-        return self._getStringAndClose(term_output)
+        return runAndRedirect(habitica.cli)
 
     def callScriptTesting(self, *cli_args):
         """Safer version of callScript that always sends a '--test' flag."""
@@ -59,24 +87,4 @@ class TerminalOutputTestCase(unittest.TestCase):
             *func_args (:obj:`list` of :obj:`str`): Variable length argument
                 list of the arguments you want to pass to the given function.
         """
-        term_output = self._redirectStdout()
-        function(*func_args)
-        self._resetStdout()
-
-        return self._getStringAndClose(term_output)
-
-    def _redirectStdout(self):
-        """Redirect terminal output to a StringIO object."""
-        term_output = StringIO()
-        sys.stdout = term_output
-        return term_output
-
-    def _resetStdout(self):
-        """Without doing this, assertions that compare strings fail?."""
-        sys.stdout = sys.__stdout__
-
-    def _getStringAndClose(self, io):
-        """Yank and return the contents of the StringIO object and close it."""
-        output = io.getvalue()
-        io.close()
-        return output
+        return runAndRedirect(function, *func_args)
