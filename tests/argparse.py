@@ -5,12 +5,9 @@
 Test cases for methods used for parsing user arguments.
 """
 
-import os
-import sys
 import unittest
 
-# Make sure we're using dev files, not the installed package
-sys.path.insert(0, os.path.abspath('..'))
+import settings  # use development code, not globally installed packages
 import habitica
 import habitica.argparse
 

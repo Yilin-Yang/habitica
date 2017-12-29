@@ -5,14 +5,10 @@
 Test cases for functions that perform API calls to Habitica.
 """
 
-import os
-import sys
 import unittest
 
 import helpers
 
-# Make sure we're using dev files, not the installed package
-sys.path.insert(0, os.path.abspath('..'))
 import habitica
 import habitica.taskmanip
 

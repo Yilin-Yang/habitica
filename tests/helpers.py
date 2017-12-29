@@ -6,12 +6,10 @@ Convenience functions for evaluating test output.
 """
 
 from StringIO import StringIO
-import os
-import sys
 import unittest
+import sys
 
-# Make sure we're using dev files, not the installed package
-sys.path.insert(0, os.path.abspath('..'))
+import settings  # use development code, not globally installed packages
 import habitica
 
 

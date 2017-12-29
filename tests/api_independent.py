@@ -6,16 +6,13 @@ Test cases for miscellaneous functions that don't require API calls.
 """
 
 from StringIO import StringIO
-import os
-import sys
 import unittest
 
 import helpers
 
-# Make sure we're using dev files, not the installed package
-sys.path.insert(0, os.path.abspath('..'))
 import habitica
 import habitica.core
+import habitica.argparse
 import habitica.taskmanip
 
 
