@@ -18,8 +18,6 @@ import habitica.taskmanip
 
 class TestInfoPrintOptions(helpers.TerminalOutputTestCase):
 
-    term_output = StringIO()
-
     def test_server_option(self):
         output = self.callScript('habitica', 'server')
         self.assertTrue(output == 'Habitica server is up\n'
