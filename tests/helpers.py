@@ -28,6 +28,17 @@ def runAndRedirect(to_run, *args, **kwargs):
     return output
 
 
+def runCmdLineAndRedirect(to_run, *cli_args):
+    """
+    Write args to sys.argv, then call the to_run object and return its output.
+
+    This redirects ALL output from stdout for the duration of the
+    function call.
+    """
+    sys.argv = cli_args
+    return runAndRedirect(to_run)
+
+
 def _redirectStdout():
     """Redirect terminal output to a StringIO object."""
     term_output = StringIO()
@@ -68,8 +79,7 @@ class TerminalOutputTestCase(unittest.TestCase):
                 list of the flags you want to pass to the habitica script, e.g.
                     self.callScript('todos', 'add', '--text="foo"')
         """
-        sys.argv = cli_args
-        return runAndRedirect(habitica.cli)
+        return runCmdLineAndRedirect(habitica.cli, *cli_args)
 
     def callScriptTesting(self, *cli_args):
         """Safer version of callScript that always sends a '--test' flag."""
