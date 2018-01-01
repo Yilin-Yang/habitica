@@ -398,7 +398,7 @@ def cli():
             decision = raw_input("Are you sure you want to proceed? (Y\\n)")
             if decision == 'N' or decision == 'n':
                 print("Exiting.")
-                sys.exit(0)
+                sys.exit(1)
             elif decision == 'Y' or decision == 'y':
                 break
             else:

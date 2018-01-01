@@ -72,9 +72,11 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
 
 def setUpModule():
     """Make sure the developer configured a test account, and nuke it."""
-    sys.argv = ['habitica', '-t', 'status']
     try:  # TODO: causes double-printing. Is there a better way to do this?
-        habitica.cli()
+        helpers.runCmdLineAndRedirect(habitica.cli,
+                                      'habitica',
+                                      '-t',
+                                      'status')
     except:
         print("Could not find test_auth.cfg file! Create one in the same "
               "directory as auth.cfg.")
@@ -82,7 +84,7 @@ def setUpModule():
 
     sys.argv = ['habitica', '-t', 'reset']
     try:
-        habitica.cli()  # TODO: exit if the user answers no to this
+        habitica.cli()
         deleteAllTags()
     except SystemExit:
         print("NOT wiping the user account, so tests will not proceed.")
