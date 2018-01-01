@@ -14,6 +14,10 @@ import habitica
 import habitica.taskmanip
 
 
+TASK_TYPES = ('todos', 'dailies', 'habits',)
+ELEMENT_TYPES = TASK_TYPES + ('tags',)
+
+
 class TestTagManipulation(helpers.TerminalOutputTestCase):
 
     to_add = ['foo', 'bar', 'moo', 'gar', 'mar']
@@ -24,7 +28,6 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
             output = self.callScriptTesting(
                 *TestTagManipulation._add_tag_args(tag))
 
-        print(output)  # TODO: remove debug
         self.assertTrue(output == ('[#] 1 foo\n'
                                    '[#] 2 bar\n'
                                    '[#] 3 moo\n'
@@ -62,7 +65,7 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
     @staticmethod
     def _add_tag_args(tag_name):
         """Produce command line arguments to add a tag with a given name."""
-        return ('habitica', '-t', 'tags', 'add', '--text="%s"' % tag_name,)
+        return ('habitica', '-t', 'tags', 'add', '--text=%s' % tag_name,)
 
     @staticmethod
     def _delete_tag_args(ids_or_names):
@@ -84,15 +87,22 @@ def setUpModule():
 
     sys.argv = ['habitica', '-t', 'reset']
     try:
+        # Nuke the test account in its entirety.
         habitica.cli()
         deleteAllTags()
+        verifyAccountEmpty()
     except SystemExit:
         print("NOT wiping the user account, so tests will not proceed.")
         sys.exit(0)
 
 
 def deleteAllTags():
-    """Delete all tags from the test account."""
+    """
+    Delete all tags from the test account.
+
+    This is still needed as an additional step, since tags persist across
+    account resets.
+    """
     tag_output = helpers.runCmdLineAndRedirect(habitica.cli,
                                                'habitica',
                                                '-t',
@@ -111,6 +121,17 @@ def deleteAllTags():
                                                'tags',
                                                'delete',
                                                '1-%s' % last_no)
+
+
+def verifyAccountEmpty():
+    """Verify that the test account is empty of tasks and tags."""
+    for elt_type in ELEMENT_TYPES:
+        output = helpers.runCmdLineAndRedirect(habitica.cli,
+                                               'habitica',
+                                               '-t',
+                                               elt_type)
+        assert(not output)
+    return
 
 
 if __name__ == '__main__':
