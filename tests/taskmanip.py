@@ -83,9 +83,32 @@ def setUpModule():
     sys.argv = ['habitica', '-t', 'reset']
     try:
         habitica.cli()  # TODO: exit if the user answers no to this
+        deleteAllTags()
     except SystemExit:
         print("NOT wiping the user account, so tests will not proceed.")
         sys.exit(0)
+
+
+def deleteAllTags():
+    """Delete all tags from the test account."""
+    tag_output = helpers.runCmdLineAndRedirect(habitica.cli,
+                                               'habitica',
+                                               '-t',
+                                               'tags')
+    if not tag_output:
+        # Tag list is already empty
+        return
+
+    # Parse the tag list output to find last tag number
+    last_item = tag_output[tag_output.rfind('\n[#] '):]
+    last_no = last_item.split(' ')[1]
+
+    tag_output = helpers.runCmdLineAndRedirect(habitica.cli,
+                                               'habitica',
+                                               '-t',
+                                               'tags',
+                                               'delete',
+                                               '1-%s' % last_no)
 
 
 if __name__ == '__main__':
