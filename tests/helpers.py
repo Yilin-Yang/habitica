@@ -74,7 +74,7 @@ class TerminalOutputTestCase(unittest.TestCase):
     def callScriptTesting(self, *cli_args):
         """Safer version of callScript that always sends a '--test' flag."""
         if '-t' not in cli_args and '--test' not in cli_args:
-            cli_args.append('-t')
+            cli_args = ('-t',) + cli_args
         return self.callScript(*cli_args)
 
     def callFunction(self, function, *func_args):
