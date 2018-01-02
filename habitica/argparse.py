@@ -79,7 +79,7 @@ def parse_list_indices(tids):
         else:
             task_ids.append(int(token))
 
-    return [e - 1 for e in set(task_ids)]
+    return sorted([e - 1 for e in set(task_ids)])
 
 
 def parse_list_strings(tstrs):

@@ -121,13 +121,16 @@ def move_tasks(hbt, args):
     """
     task_type = argparse.task_type_from_args(args, 'plural')
     cur_tasks = get_tasks(hbt, task_type)
-    new_pos = str(int(args['<new-pos>']) - 1)
+    new_pos = int(args['<new-pos>']) - 1
     tids = argparse.parse_list_indices(args['<task-ids>'])
-    for tid in reversed(tids):
+    for tid in tids:
+        # Step top-to-bottom thru items-to-move, placing each
+        # underneath the one before.
         task_fields = cur_tasks[tid]
         task_fields['_method'] = 'post'
-        task_fields['_position'] = new_pos
+        task_fields['_position'] = str(new_pos)
         hbt.user.tasks(**task_fields)
+        new_pos += 1
 
 
 def get_these_tags(hbt, args):
