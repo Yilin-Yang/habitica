@@ -129,6 +129,43 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
         self.assertTrue(output == '')
 
 
+class TestTodoManipulation(helpers.TerminalOutputTestCase):
+    """
+    Generic test case for adding, editing, deleting todos, dailies, habits.
+    """
+
+    to_add = ['foo', 'bar', 'moo', 'gar', 'mar']
+
+    def test_todo_manip(self):
+        # Test adding tasks
+        for task in TestTodoManipulation.to_add:
+            output = self.callScriptTesting(
+                _task_manip_args(
+                    'todo',
+                    'add',
+                    **{'--text': task})
+            )
+
+        self.assertTrue(output == ('[ ] 1 foo\n'
+                                   '[ ] 2 bar\n'
+                                   '[ ] 3 moo\n'
+                                   '[ ] 4 gar\n'
+                                   '[ ] 5 mar\n'
+                                   )
+                        )
+
+        # Test changing task properties
+        # TODO: make it possible to check when difficulty is changed
+        output = self.callScriptTesting(
+            _task_manip_args(
+                'todo',
+                'edit',
+                '1-3',
+                **{'--difficulty': 'hard'}
+            )
+        )
+
+
 def setUpModule():
     """Make sure the developer configured a test account, and nuke it."""
     try:  # TODO: causes double-printing. Is there a better way to do this?
