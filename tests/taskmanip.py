@@ -17,6 +17,72 @@ import habitica.taskmanip
 TASK_TYPES = ('todos', 'dailies', 'habits',)
 ELEMENT_TYPES = TASK_TYPES + ('tags',)
 
+TASK_FIELDS = ('--text',
+               '--notes',
+               '--date',
+               '--tags',
+               '--difficulty',
+               )
+
+
+def _add_tag_args(tag_name):
+    """Produce command line arguments to add a tag with a given name."""
+    return ('habitica', '-t', 'tags', 'add', '--text=%s' % tag_name,)
+
+
+def _delete_tag_args(ids_or_names):
+    """Produce command line arguments to delete a tag."""
+    return ('habitica', '-t', 'tags', 'delete', ids_or_names)
+
+
+def _task_manip_args(task_type, command, tids, **kwargs):
+    """
+    Produce command line arguments to add/edit/delete a task.
+
+    To specify fields, use kwargs.
+
+        _task_manip_args('todos', 'add', None
+                         **{'--text':'Foo',
+                            '--date':'2017-12-01'})
+        Returns:
+            ['habitica',
+             '-t',
+             'todos',
+             'add',
+             '--text=Foo',
+             '--date='2017-12-01']
+
+        _task_manip_args('dailies', 'edit', '1-3',
+                         **{'--date':'2017-12-01'})
+        Returns:
+            ['habitica',
+             '-t',
+             'dailies',
+             'edit',
+             '1-3',
+             '--date='2017-12-01']
+
+    """
+    args = ['habitica',
+            '-t',
+            task_type,
+            command]
+
+    if tids is not None:
+        if command == 'add':
+            raise ValueError("Can't specify tids with add command.")
+        assert(isinstance(tids, basestring))
+        args.append(tids)
+
+    for field in TASK_FIELDS:
+        if field in kwargs:
+            args.append('%s=%s' % (field,
+                                   kwargs.pop(field)))
+    if kwargs:
+        raise ValueError("Invalid fields: %s" % str(kwargs))
+
+    return args
+
 
 class TestTagManipulation(helpers.TerminalOutputTestCase):
 
@@ -26,7 +92,7 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
         # Test adding tags
         for tag in TestTagManipulation.to_add:
             output = self.callScriptTesting(
-                *TestTagManipulation._add_tag_args(tag))
+                *_add_tag_args(tag))
 
         self.assertTrue(output == ('[#] 1 foo\n'
                                    '[#] 2 bar\n'
@@ -38,7 +104,7 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
 
         # Test removing tags by name
         output = self.callScriptTesting(
-            *TestTagManipulation._delete_tag_args('moo'))
+            *_delete_tag_args('moo'))
 
         self.assertTrue(output == ('[#] 1 foo\n'
                                    '[#] 2 bar\n'
@@ -49,7 +115,7 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
 
         # Test removing tags by index
         output = self.callScriptTesting(
-            *TestTagManipulation._delete_tag_args('2,4'))
+            *_delete_tag_args('2,4'))
 
         self.assertTrue(output == ('[#] 1 foo\n'
                                    '[#] 2 gar\n'
@@ -58,19 +124,9 @@ class TestTagManipulation(helpers.TerminalOutputTestCase):
 
         # Test removing multiple tags by name
         output = self.callScriptTesting(
-            *TestTagManipulation._delete_tag_args('foo,gar'))
+            *_delete_tag_args('foo,gar'))
 
         self.assertTrue(output == '')
-
-    @staticmethod
-    def _add_tag_args(tag_name):
-        """Produce command line arguments to add a tag with a given name."""
-        return ('habitica', '-t', 'tags', 'add', '--text=%s' % tag_name,)
-
-    @staticmethod
-    def _delete_tag_args(ids_or_names):
-        """Produce command line arguments to delete a tag."""
-        return ('habitica', '-t', 'tags', 'delete', ids_or_names)
 
 
 def setUpModule():
