@@ -275,90 +275,13 @@ def set_checklists_status(auth, args):
     return
 
 
-# TODO: DRY the manipulable objects
-def cli():
+def cli_explicit(args):
     """
-    Habitica command-line interface.
+    Habitica command-line interface, with explicitly-given arguments.
 
-    Usage: habitica (habits | dailies | todos | tags | status | server | home)
-                    [options]
-           habitica (habits | dailies | todos | tags) add [options]
-           habitica (habits | dailies | todos | tags) edit <task-ids> [options]
-           habitica (habits | dailies | todos | tags) delete <task-ids>
-                    [options]
-           habitica (dailies | todos) (done | undo) <task-ids> [options]
-           habitica habits (up | down) <task-ids> [options]
-           habitica reset [options]
-           habitica --help
-           habitica --version
-
-    Options:
-      -h --help         Show this screen
-      --version         Show version
-      --text=<txt>      Quoted string holding the name of the task
-      --notes=<n>       Quoted string holding the task's notes
-      --tags=<tg>       Comma-separated list of the task's tags
-      --difficulty=<d>  (easy | medium | hard) [default: easy]
-      --date=<dd>       Task's due date, given as YYYY-MM-DD
-      --verbose         Show some logging information
-      --debug           Some all logging information
-      -c --checklists   Toggle displaying checklists on or off
-      -t --test         Use test_auth credentials, not regular credentials
-
-    The habitica commands are:
-      status                  Show HP, XP, GP, and more
-      edit                    Change task fields, see below
-      habits                  List habit tasks
-      habits up <task-id>     Up (+) habit <task-id>
-      habits down <task-id>   Down (-) habit <task-id>
-      dailies                 List daily tasks
-      dailies done            Mark daily <task-id> complete
-      dailies undo            Mark daily <task-id> incomplete
-      todos                   List todo tasks
-      todos done <task-id>    Mark one or more todo <task-id> completed
-      todos add <task>        Add todo with description <task>
-      todos delete <task-id>  Delete one or more todo <task-id>
-      server                  Show status of Habitica service
-      home                    Open tasks page in default browser
-      reset                   Restarts account from scratch, deleting
-                              everything.
-
-    For `habits up|down`, `dailies done|undo`, `todos done`, and `todos
-    delete`, you can pass one or more <task-id> parameters, using either
-    comma-separated lists or ranges or both. For example, `todos done
-    1,3,6-9,11`.
-
-    For `tags delete` or `[TASK_TYPE] edit --tags=`, you can pass
-    in (a comma-separated list of) the name(s) of the tags to delete or apply.
-    This is case-sensitive.
-
-    *Be warned that Habitica allows you to create multiple tags with the
-    exact same namestring. If your account has multiple tags with the same
-    name string, manipulating tags by name will produce undefined behavior.*
-
-    Editing existing tasks is done with the `edit` command. To edit a
-    task, specify the task's type (habit, daily, or todo) and all of the
-    fields you want to change. For example,
-
-        # Fix typo
-        habitica todos add Tautn English pig-dogs
-        habitica edit todos 1 --name="Taunt English pig-dogs"
-
-        # Bulk add tags
-        habitica edit todos 3,9,15-20 --tags=housechores,simple
-
-        # Bulk remove tags
-        habitica edit dailies 1,2,3 --tags=""
-
-        # Set due dates
-        habitica edit todos 5-9 --date=2000-01-01
-
-    To show checklists with "todos" and "dailies" permanently, set
-    'checklists' in your auth.cfg file to `checklists = true`.
+    Makes it possible to reuse the command-line interface from within
+    the module.
     """
-
-    # set up args
-    args = docopt(cli.__doc__, version=VERSION)
 
     # set up logging
     if args['--verbose']:
@@ -443,6 +366,9 @@ def cli():
         elif args['edit']:
             taskmanip.bulk_edit_tasks(hbt, 'edit', args)
 
+        elif args['move']:
+            taskmanip.move_tasks(hbt, args)
+
         print_task_list(
             taskmanip.get_tasks(hbt,
                                 argparse.task_type_from_args(args, 'plural'))
@@ -450,7 +376,6 @@ def cli():
 
     # Manipulating tags
     elif args['tags']:
-        # TODO: expand
 
         if args['add']:
             taskmanip.add_tag(hbt, args)
@@ -463,6 +388,94 @@ def cli():
             taskmanip.rename_tag(hbt, args)
 
         print_tags_list(taskmanip.get_tags(hbt))
+
+
+def cli():
+    """
+    Habitica command-line interface.
+
+    Usage: habitica (habits | dailies | todos | tags | status | server | home)
+                    [options]
+           habitica (habits | dailies | todos | tags) add [options]
+           habitica (habits | dailies | todos | tags) edit <task-ids> [options]
+           habitica (habits | dailies | todos | tags) move <task-ids>
+                    <new-pos> [options]
+           habitica (habits | dailies | todos | tags) delete <task-ids>
+                    [options]
+           habitica (dailies | todos) (done | undo) <task-ids> [options]
+           habitica habits (up | down) <task-ids> [options]
+           habitica reset [options]
+           habitica --help
+           habitica --version
+
+    Options:
+      -h --help         Show this screen
+      --version         Show version
+      --text=<txt>      Quoted string holding the name of the task
+      --notes=<n>       Quoted string holding the task's notes
+      --tags=<tg>       Comma-separated list of the task's tags
+      --difficulty=<d>  (easy | medium | hard) [default: easy]
+      --date=<dd>       Task's due date, given as YYYY-MM-DD
+      --verbose         Show some logging information
+      --debug           Some all logging information
+      -c --checklists   Toggle displaying checklists on or off
+      -t --test         Use test_auth credentials, not regular credentials
+
+    The habitica commands are:
+      status                  Show HP, XP, GP, and more
+      edit                    Change task fields, see below
+      habits                  List habit tasks
+      habits up <task-id>     Up (+) habit <task-id>
+      habits down <task-id>   Down (-) habit <task-id>
+      dailies                 List daily tasks
+      dailies done            Mark daily <task-id> complete
+      dailies undo            Mark daily <task-id> incomplete
+      todos                   List todo tasks
+      todos done <task-id>    Mark one or more todo <task-id> completed
+      todos add <task>        Add todo with description <task>
+      todos delete <task-id>  Delete one or more todo <task-id>
+      server                  Show status of Habitica service
+      home                    Open tasks page in default browser
+      reset                   Restarts account from scratch, deleting
+                              everything.
+
+    For `habits up|down`, `dailies done|undo`, `todos done`, and `todos
+    delete`, you can pass one or more <task-id> parameters, using either
+    comma-separated lists or ranges or both. For example, `todos done
+    1,3,6-9,11`.
+
+    For `tags delete` or `[TASK_TYPE] edit --tags=`, you can pass
+    in (a comma-separated list of) the name(s) of the tags to delete or apply.
+    This is case-sensitive.
+
+    *Be warned that Habitica allows you to create multiple tags with the
+    exact same namestring. If your account has multiple tags with the same
+    name string, manipulating tags by name will produce undefined behavior.*
+
+    Editing existing tasks is done with the `edit` command. To edit a
+    task, specify the task's type (habit, daily, or todo) and all of the
+    fields you want to change. For example,
+
+        # Fix typo
+        habitica todos add Tautn English pig-dogs
+        habitica edit todos 1 --name="Taunt English pig-dogs"
+
+        # Bulk add tags
+        habitica edit todos 3,9,15-20 --tags=housechores,simple
+
+        # Bulk remove tags
+        habitica edit dailies 1,2,3 --tags=""
+
+        # Set due dates
+        habitica edit todos 5-9 --date=2000-01-01
+
+    To show checklists with "todos" and "dailies" permanently, set
+    'checklists' in your auth.cfg file to `checklists = true`.
+    """
+
+    # set up args
+    args = docopt(cli.__doc__, version=VERSION)
+    cli_explicit(args)
 
 
 if __name__ == '__main__':
