@@ -89,12 +89,44 @@ def bulk_edit_tasks(hbt, action, args):
         elif action == 'up' or action == 'down':
             # Habits, dailies, and todos are all checked with "up"
             # and unchecked/decremented with "down"
-            task_fields['direction'] = action
+            task_fields['_direction'] = action
             task_fields['_method'] = 'post'
         elif action == 'edit':
             write_new_fields(task_fields, argparse.fields_from_args(args))
             task_fields['_method'] = 'put'
 
+        hbt.user.tasks(**task_fields)
+
+
+def move_tasks(hbt, args):
+    """
+    Move given tasks to requested position, maintaining their relative order.
+
+    Given the following task list:
+        [1]
+        [2]
+        [3]
+        [4]
+        [5]
+
+    This command:
+        habitica [task] move 1,4-5 2
+
+    Will rearrange the list like so:
+        [2]
+        [1]
+        [4]
+        [5]
+        [3]
+    """
+    task_type = argparse.task_type_from_args(args, 'plural')
+    cur_tasks = get_tasks(hbt, task_type)
+    new_pos = str(int(args['<new-pos>']) - 1)
+    tids = argparse.parse_list_indices(args['<task-ids>'])
+    for tid in reversed(tids):
+        task_fields = cur_tasks[tid]
+        task_fields['_method'] = 'post'
+        task_fields['_position'] = new_pos
         hbt.user.tasks(**task_fields)
 
 
