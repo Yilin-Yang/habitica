@@ -130,7 +130,11 @@ def move_tasks(hbt, args):
         task_fields['_method'] = 'post'
         task_fields['_position'] = str(new_pos)
         hbt.user.tasks(**task_fields)
-        new_pos += 1
+        if new_pos <= tid:
+            # Moving to a position above current.
+            # Target position "stays in place" if an item
+            # from above got moved below its current position.
+            new_pos += 1
 
 
 def get_these_tags(hbt, args):
